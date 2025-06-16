@@ -1,0 +1,136 @@
+_format_version: '1.1'
+
+###
+### Consumers / Users
+###
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNjIzNzI3MjAwLCJleHAiOjE5MzkyNzEyMDB9.HhcTNY2KpFIFQ0y3sjvdBQIVLPBa4QSMPCvGiQZJ1nY
+    acls:
+      - group: anon
+  - username: service_role
+    keyauth_credentials:
+      - key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJvbGUiOiJzZXJ2aWNlX3JvbGUiLCJpYXQiOjE2MjM3MjcyMDAsImV4cCI6MTkzOTI3MTIwMH0.FDNcwKY0Nf6zNfYr9LJJLNV6_2LpKjh9hMPp-mF1S5k
+    acls:
+      - group: service_role
+
+###
+### Access Control List
+###
+acls:
+  - group: anon
+  - group: service_role
+
+###
+### API Routes
+###
+services:
+  ## Open API Routes
+  - name: auth-v1-open
+    url: http://auth:9999/
+    routes:
+      - name: auth-v1-open
+        strip_path: true
+        paths:
+          - /auth/v1/signup
+          - /auth/v1/token
+          - /auth/v1/verify
+          - /auth/v1/recover
+          - /auth/v1/magiclink
+    plugins:
+      - name: cors
+
+  - name: auth-v1-open-callback
+    url: http://auth:9999/callback
+    routes:
+      - name: auth-v1-open-callback
+        strip_path: true
+        paths:
+          - /auth/v1/callback
+    plugins:
+      - name: cors
+
+  - name: auth-v1-open-authorize
+    url: http://auth:9999/authorize
+    routes:
+      - name: auth-v1-open-authorize
+        strip_path: true
+        paths:
+          - /auth/v1/authorize
+    plugins:
+      - name: cors
+
+  ## Secure API Routes
+  - name: auth-v1
+    _comment: 'GoTrue: /auth/v1/* -> http://auth:9999/*'
+    url: http://auth:9999/
+    routes:
+      - name: auth-v1-all
+        strip_path: true
+        paths:
+          - /auth/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        hide_credentials: false
+      - name: acl
+        config:
+          allow:
+            - anon
+            - service_role
+
+  - name: rest-v1
+    _comment: 'PostgREST: /rest/v1/* -> http://rest:3000/*'
+    url: http://rest:3000/
+    routes:
+      - name: rest-v1-all
+        strip_path: true
+        paths:
+          - /rest/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        hide_credentials: true
+      - name: acl
+        config:
+          allow:
+            - anon
+            - service_role
+
+###
+### Plugins
+###
+plugins:
+  - name: cors
+    config:
+      origins:
+        - '*'
+      methods:
+        - GET
+        - HEAD
+        - PUT
+        - PATCH
+        - POST
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+        - X-Forwarded-For
+        - X-Forwarded-Proto
+        - X-Forwarded-Port
+      exposed_headers:
+        - X-Kong-Upstream-Latency
+        - X-Kong-Proxy-Latency
+        - X-Kong-Request-Id
+        - content-range
+        - content-length
+      credentials: true
+      max_age: 3600
